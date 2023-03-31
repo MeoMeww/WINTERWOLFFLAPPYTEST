@@ -5,12 +5,20 @@ using UnityEngine;
 public class PlayerController : MonoBehaviour {
 
 	[SerializeField] private float thrust, minTiltSmooth, maxTiltSmooth, hoverDistance, hoverSpeed;
+	[Header("MeoMewParameter")]
+	[SerializeField] float timeEffectDead = 1f;
+
+	private Material pMat;
+	private bool wasDead;
 	private bool start;
 	private float timer, tiltSmooth, y;
 	private Rigidbody2D playerRigid;
 	private Quaternion downRotation, upRotation;
 
 	void Start () {
+		pMat = GetComponent<SpriteRenderer>().material;
+		SetDefaultPlayerColor();
+		wasDead = false;
 		tiltSmooth = maxTiltSmooth;
 		playerRigid = GetComponent<Rigidbody2D> ();
 		downRotation = Quaternion.Euler (0, 0, -90);
@@ -78,10 +86,29 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	public void KillPlayer () {
-		GameManager.Instance.EndGame ();
-		playerRigid.velocity = Vector2.zero;
-		// Stop the flapping animation
-		GetComponent<Animator> ().enabled = false;
+		if (!wasDead)
+		{
+			GameManager.Instance.EndGame ();
+			playerRigid.velocity = Vector2.zero;
+			StartCoroutine(EffectDeadGrayScale());
+			// Stop the flapping animation
+			GetComponent<Animator> ().enabled = false;
+			wasDead = true;
+		}
 	}
 
+	IEnumerator EffectDeadGrayScale()
+	{
+		float t = 0;
+		while (t<timeEffectDead)
+		{
+			pMat.SetFloat("effectAmount",(float)t/timeEffectDead);
+			t += Time.deltaTime;
+			yield return null;
+		}
+	}
+	void SetDefaultPlayerColor()
+	{
+		pMat.SetFloat("effectAmount",0);
+	}
 }
