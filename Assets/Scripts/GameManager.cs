@@ -1,14 +1,23 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Random = UnityEngine.Random;
 
-public class GameManager : MonoBehaviour {
+[Serializable]public class PlayerShowing
+{
+	public Sprite playerImage;
+	public AnimatorController playerAnimator;
+}
+public class GameManager : MonoBehaviour
+{
 
 	public static GameManager Instance;
 
-	[SerializeField] private GameObject[] playerPrefabs;
+	[SerializeField] private GameObject playerPrefabs;
 	[SerializeField] private Transform playerPos;
 	[SerializeField] private Sprite[] backgroundImage;
 	[SerializeField] private SpriteRenderer background;
@@ -20,28 +29,38 @@ public class GameManager : MonoBehaviour {
 	[SerializeField] private Sprite[] medals;
 	[SerializeField] private Image medalImage;
 	[SerializeField] private GameObject medalSparkle;
-
+	//
+	//#1 MeoMew change use to only one preb
+	[SerializeField] private PlayerShowing[] playerInterface;
 	private GameObject flappy;
 	private bool ready, start, end, newBool;
 	private int gameScore;
 
-	void Awake () {
+	void Awake()
+	{
 		// Create an Instance of the GameManager to be used by other scripts
 		Instance = this;
 	}
 
-	void Start () {
+	void Start()
+	{
 		// Delete all Player Preferences while starting the game
 		// This is done only for testing purposes and should not be kept in the actual game
 		// PlayerPrefs.DeleteAll();
-
-
+		SpawnNewPlayer();
 		ready = true;
-		// Create one amongst the 3 players
-		flappy = Instantiate (playerPrefabs[Random.Range (0, playerPrefabs.Length)], playerPos.position, transform.rotation);
-		flappy.transform.parent = playerPos;
 		// Use one amongst the 2 Backgrounds
-		background.sprite = backgroundImage[Random.Range (0, backgroundImage.Length)];
+		background.sprite = backgroundImage[Random.Range(0, backgroundImage.Length)];
+	}
+
+	void SpawnNewPlayer()
+	{
+		//MeoMew change, use the list character show
+		int indexRd = Random.Range(0, playerInterface.Length);
+		flappy = Instantiate(playerPrefabs, playerPos.position, transform.rotation);
+		playerPrefabs.GetComponent<SpriteRenderer>().sprite = playerInterface[indexRd].playerImage;
+		playerPrefabs.GetComponent<Animator>().runtimeAnimatorController = playerInterface[indexRd].playerAnimator;
+		flappy.transform.parent = playerPos;
 	}
 
 	void Update () {
