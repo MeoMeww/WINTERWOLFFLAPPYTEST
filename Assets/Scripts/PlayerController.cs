@@ -5,24 +5,32 @@ using UnityEngine;
 public class PlayerController : MonoBehaviour {
 
 	[SerializeField] private float thrust, minTiltSmooth, maxTiltSmooth, hoverDistance, hoverSpeed;
-	[Header("MeoMewParameter")]
-	[SerializeField] float timeEffectDead = 1f;
 
-	private Material pMat;
-	private bool wasDead;
 	private bool start;
 	private float timer, tiltSmooth, y;
 	private Rigidbody2D playerRigid;
 	private Quaternion downRotation, upRotation;
-
+	[Header("MeoMewParameter")]
+	[SerializeField] 
+	float timeEffectDead = 1f;
+	private Material pMat;
+	private bool wasDead;
+	private bool wasGround;
+	public float gravity = -9.8f;
+	public float gravityScale = 1f;
+	public float jumpForce=10;
+	float velocity;
 	void Start () {
 		pMat = GetComponent<SpriteRenderer>().material;
 		SetDefaultPlayerColor();
 		wasDead = false;
+		wasGround = false;
 		tiltSmooth = maxTiltSmooth;
 		playerRigid = GetComponent<Rigidbody2D> ();
 		downRotation = Quaternion.Euler (0, 0, -90);
 		upRotation = Quaternion.Euler (0, 0, 35);
+		//MeoMew disable gravity for move by translate
+		Physics.gravity = Vector3.zero;
 	}
 
 	void Update () {
@@ -41,6 +49,8 @@ public class PlayerController : MonoBehaviour {
 
 	void LateUpdate () {
 		if (GameManager.Instance.GameState ()) {
+			//When Start game, velocity was added every fix sec
+			velocity += gravity * gravityScale * Time.deltaTime;
 			if (Input.GetMouseButtonDown (0)) {
 				if(!start){
 					// This code checks the first tap. After first tap the tutorial image is removed and game starts
@@ -48,14 +58,23 @@ public class PlayerController : MonoBehaviour {
 					GameManager.Instance.GetReady ();
 					GetComponent<Animator>().speed = 2;
 				}
-				playerRigid.gravityScale = 1f;
+
+				//playerRigid.gravityScale = 1f;
 				tiltSmooth = minTiltSmooth;
 				transform.rotation = upRotation;
-				playerRigid.velocity = Vector2.zero;
+				//playerRigid.velocity = Vector2.zero;
 				// Push the player upwards
-				playerRigid.AddForce (Vector2.up * thrust);
+				//playerRigid.AddForce (Vector2.up * thrust);
 				SoundManager.Instance.PlayTheAudio("Flap");
+				//MeoMew change code movement not use AddForce or physics
+				velocity = jumpForce;
+				
 			}
+		}
+
+		if (!wasGround)
+		{
+			playerRigid.transform.Translate(new Vector3(0, velocity, 0) * Time.deltaTime,Space.World);
 		}
 		if (playerRigid.velocity.y < -1f) {
 			// Increase gravity so that downward motion is faster than upward motion
@@ -65,7 +84,9 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	void OnTriggerEnter2D (Collider2D col) {
-		if (col.transform.CompareTag ("Score")) {
+		if (col.transform.CompareTag ("Ground")) {
+			ColliderWithGround();
+		} else if (col.transform.CompareTag ("Score")) {
 			Destroy (col.gameObject);
 			GameManager.Instance.UpdateScore ();
 		} else if (col.transform.CompareTag ("Obstacle")) {
@@ -78,22 +99,31 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	void OnCollisionEnter2D (Collision2D col) {
-		if (col.transform.CompareTag ("Ground")) {
-			playerRigid.simulated = false;
-			KillPlayer ();
-			transform.rotation = downRotation;
-		}
+		//if (col.transform.CompareTag ("Ground")) {
+		//	Debug.LogError("cold ground");
+		//	ColliderWithGround();
+		//}
 	}
 
+	void ColliderWithGround()
+	{
+		KillPlayer ();
+		playerRigid.simulated = false;
+		wasGround = true;
+		transform.rotation = downRotation;
+	}
 	public void KillPlayer () {
 		if (!wasDead)
 		{
+			//Physics.gravity = new Vector3(0, -9.81f, 0);
 			GameManager.Instance.EndGame ();
 			playerRigid.velocity = Vector2.zero;
 			StartCoroutine(EffectDeadGrayScale());
 			// Stop the flapping animation
 			GetComponent<Animator> ().enabled = false;
 			wasDead = true;
+			playerRigid.simulated = true;
+			playerRigid.bodyType = RigidbodyType2D.Dynamic;
 		}
 	}
 
